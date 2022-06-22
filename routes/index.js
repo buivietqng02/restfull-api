@@ -1,12 +1,12 @@
-const serverConfig=require('../serverConfig');
-var express = require("express");
-var router = express.Router();
-var controller = require("../controller");
+
+const express = require("express");
+const router = express.Router();
+const controller = require("../controller");
 const jwt = require("jsonwebtoken");
 
 
 const authorized = (req, res, next) => {
-  console.log(req.headers);
+  
   if (
     !req.headers["authorization"] ||
     !req.headers["authorization"].startsWith("Bearer")
@@ -14,7 +14,7 @@ const authorized = (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
   const token = req.headers["authorization"].split(" ")[1];
-  console.log(token);
+ 
   jwt.verify(token, process.env.SECRET, (err, decoded) => {
     if (err) return res.status(400).json({ message: "unauthorized" });
     else req.credential = decoded;
@@ -24,7 +24,7 @@ const authorized = (req, res, next) => {
 
 
 
-router.get(serverConfig.routes, authorized, controller.getProfileInfo);
+router.get("/api/users/me/", authorized, controller.getProfileInfo);
 router.delete("/api/users/me/", authorized, controller.deleteProfile);
 router.patch("/api/users/me", authorized, controller.changeProfilePassword);
 router.post("/api/auth/register", controller.createProfile);

@@ -1,18 +1,28 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-var { User, Note, Credential } = require("../models/schema.js");
+const { User, Note } = require("../models/schema.js");
 exports.getProfileInfo = function (req, res, next) {
   const credential = req.credential;
   User.findOne({ username: credential.username }, function (err, user) {
     if (err) return res.status(500).json({ message: err.message });
     if (!user) return res.status(400).json({ message: "not found" });
-    return res.status(200).json(user);
+
+    //need to filter out the password
+    const resUser= {
+        username: user.username,
+        createdDate: user.createdDate,
+        _id: user._id,
+    }
+    return res.status(200).json(resUser);
   });
 };
 exports.deleteProfile = async function (req, res, next) {
   try {
     const credential = req.credential;
-    const user = await User.findOneAndDelete({ username: credential.username });
+    await User.findOneAndDelete({ username: credential.username });
+   
+
+    res.status(200).json({ message: "success" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -22,14 +32,14 @@ exports.changeProfilePassword = function (req, res, next) {
   const { oldPassword, newPassword } = req.body;
   if (!oldPassword || !newPassword)
     return res.status(400).json({ message: "missing content" });
-  Credential.findOne(
+  User.findOne(
     { username: credential.username },
-    function (err, credential) {
+    function (err, user) {
       if (err) return res.status(500).json({ message: err.message });
-      if (credential.validPassword(oldPassword))
+      if (!user.validPassword(oldPassword))
         return res.status(400).json({ message: "wrong old password" });
-      credential.password = credential.encryptPassword(newPassword);
-      credential.save(function (err) {
+      user.password = user.encryptPassword(newPassword);
+      user.save(function (err) {
         if (err) return res.status(500).json({ message: err.message });
         return res
           .status(200)
@@ -40,33 +50,27 @@ exports.changeProfilePassword = function (req, res, next) {
 };
 exports.createProfile = function (req, res, next) {
   const { username, password } = req.body;
-  Credential.findOne({ username: username }, function (err, credential) {
+  User.findOne({ username: username }, function (err, user) {
     if (err) {
       return res.status(500).json({
         message: "Internal Server Error",
       });
-    } else if (credential) {
+    } else if (user) {
       return res.status(409).json({
         message: "Username already exists",
       });
     } else {
-      const newCredential = new Credential({ username });
-      newCredential.password = newCredential.encryptPassword(password);
+      const newUser = new User({ username, createdDate: new Date().toString() });
+      newUser.password = newUser.encryptPassword(password);
 
-      newCredential.save(function (err, credential) {
+      newUser.save(function (err) {
         if (err) {
           return res.status(500).json({
             message: "Internal Server Error",
           });
         }
-        const user = new User({
-          username: credential.username,
-          createdDate: new Date().toString(),
-        });
-        user.save(function (err, user) {
-          if (err) return res.status(500).json({ message: err.message });
-          return res.status(200).json({ message: "success" });
-        });
+        return res.status(200).json({ message: "success" });
+       
       });
     }
   });
@@ -75,16 +79,16 @@ exports.login = function (req, res, next) {
   const { username, password } = req.body;
   if (!username || !password)
     return res.status(400).json({ message: "missing usename or password" });
-  Credential.findOne({ username }, function (err, credential) {
+  User.findOne({ username }, function (err, user) {
     if (err) return res.status(500).json({ message: err.message });
-    if (!credential)
+    if (!user)
       return res.status(400).json({ message: "username not found" });
-    if (!credential.validPassword(password))
+    if (!user.validPassword(password))
       return res.status(400).json({ message: "wrong password" });
-    const token = jwt.sign({ username, password }, process.env.SECRET, {
-      expiresIn: "1h",
+    const jwt_token = jwt.sign({ username, password }, process.env.SECRET, {
+      expiresIn: "24h",
     });
-    res.status(200).json({ message: "success", token });
+    res.status(200).json({ message: "success", jwt_token });
   });
 };
 exports.getUserNotes = function (req, res, next) {
@@ -95,6 +99,7 @@ exports.getUserNotes = function (req, res, next) {
     const offset = parseInt(req.query.offset,10)||0;
     const limit = parseInt(req.query.limit,10) ||0;
     Note.find({ userId: user._id })
+
       .skip(offset)
       .limit(limit)
       .exec(function (err, notes) {
@@ -134,7 +139,7 @@ exports.getUserNoteById = function (req, res, next) {
   Note.findById({ _id: id }, function (err, note) {
     if (err) return res.status(500).json({ message: err.message });
     if (!note)
-      return res.status(400).json({ message: "no note found with thid id" });
+      return res.status(400).json({ message: "no note found with this id" });
     return res.status(200).json(note);
   });
 };

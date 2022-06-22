@@ -1,16 +1,18 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var mongoose= require('mongoose');
-var indexRouter = require('./routes/index');
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const mongoose= require('mongoose');
+
+const indexRouter = require('./routes/index');
 
 
-var app = express();
-var fs= require('fs')
-const morgan= require('morgan')
-var accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
+const app = express();
+const fs= require('fs')
+const morgan= require('morgan');
+const { constants } = require('buffer');
+const accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
   flags: "a",
 });
 // setup the logger
@@ -53,10 +55,11 @@ catch (err) {
   console.log("error when connect to mongoDB");
   
 
+
 }
 const db= mongoose.connection;
-db.once('open', ()=> console.log(`connect to mongo`))
-db.once('error', ()=> console.log(`error when connect to mongo`))
+db.once('open', ()=> console.log(`connected to mongoose db`))
+db.once('error', ()=> console.log(`error when connect to mongoose db`))
 
 
 module.exports = app;

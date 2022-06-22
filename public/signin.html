@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <form>
+        <h1>Sign in</h1>
+        <label>Username</label>
+        <input type="text" name="username" id='username'/><br/>
+        <label>Password</label>
+        <input type="password" name="password" id="password"/><br/>
+        <input type="submit" value="Submit" id= "submit"/>
+    </form>
+    <div id="messages"></div>
+    <hr/>
+    <button onclick="getNotes()">Get All Notes</button>
+    <div>
+    <ul id="notes"></ul>
+    </div>
+    <hr/>
+    <div>
+    <textarea id="text" cols="20" rows="5"></textarea>
+    <button onclick="createNote()">Create New Note</button>
+    <p id="createNoteMessage"></p>
+    </div>
+
+
+    <script>
+        function handleSubmit(e) {
+            e.preventDefault();
+            const username= document.querySelector("#username").value;
+           
+            const password= document.querySelector("#password").value;
+           const messagesDiv= document.querySelector('#messages');
+
+            fetch("/api/auth/login",{
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({username, password})
+            })
+            .then(response=> response.json()
+               
+            )
+            .then(data=> {
+                console.log(data)
+                messagesDiv.innerHTML='';
+                messagesDiv.textContent=data.message;
+                if (data.jwt_token) {
+                   
+                    localStorage.setItem('token', data.jwt_token)
+                }
+            })
+            .catch(err=> console.log(err))
+
+        }
+        const submitBtn= document.querySelector("#submit")
+        submitBtn.addEventListener('click', handleSubmit)
+        const listNotes= document.querySelector('#notes')
+        function getNotes() {
+            fetch('/api/notes', {
+                method: 'GET',
+                headers: {
+                    'authorization': 'Bearer' +' '+ localStorage.getItem('token')
+                }
+
+            })
+            .then(response=> response.json())
+            .then(data=> {
+                console.log(data)
+                if (data.notes && data.notes.length>= 1) {
+                    data.notes.forEach(item=> {
+
+                        const liElem= document.createElement('li')
+                        liElem.textContent=item._id+ '\n'+ item.text;
+                        listNotes.appendChild(liElem)
+                    })
+                }
+
+            })
+        }
+        function createNote() {
+            const text= document.querySelector('#text').value;
+            const noteMessage=document.querySelector('#createNoteMessage')
+            fetch('/api/notes', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'authorization': 'Bearer' +' '+ localStorage.getItem('token')
+
+                },
+                body : JSON.stringify({text:text})
+
+                
+            })
+            .then(response=> response.json())
+            .then(data=>{
+                noteMessage.innerText= data.message
+            })
+            .catch(err=> console.log(err))
+
+        }
+    </script>
+
+    
+</body>
+</html>
